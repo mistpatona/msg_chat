@@ -22,7 +22,7 @@ add_client(Conn) ->
 %% Behavioural functions
 %% ====================================================================
 
-%% init/1
+%% init/1  
 %% ====================================================================
 %% @doc <a href="http://www.erlang.org/doc/man/supervisor.html#Module:init-1">supervisor:init/1</a>
 -spec init(Args :: term()) -> Result when
@@ -39,10 +39,10 @@ add_client(Conn) ->
 				   | temporary,
 	Modules :: [module()] | dynamic.
 %% ====================================================================
-init([C]) ->
+init([]) ->
 	Sup_flags  = #{strategy => simple_one_for_one},
-	Child = #{id=> C,
-			  start => {chat_cli,start_link,[C]},
+	Child = #{id=> ignored,
+			  start => {chat_cli,start_link,[]},
 			  restart => temporary
 			 },
 	{ok,{Sup_flags, [Child]}}.

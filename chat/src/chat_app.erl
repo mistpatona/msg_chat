@@ -2,7 +2,7 @@
 %% @doc @todo Add description to chat_sup.
 
 
--module(chat_sup). %also serves as chat_app
+-module(chat_app). %also serves as chat_sup
 -behaviour(supervisor).  
 -behaviour(application).
 -export([init/1]).
@@ -58,7 +58,7 @@ init([]) ->
 				   start => {chat_cli_sup,start_link,[]},
 				   type  => supervisor},
 	Login      = #{id => login,
-				   start => {char_login,start_link,[]}
+				   start => {chat_login,start_link,[]}
 				  },
 	{ok,{Sup_flags, [Stub_sup,Msg_srv,Cli_sup,Login]}}.
 	
