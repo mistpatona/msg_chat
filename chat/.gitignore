@@ -1,2 +1,3 @@
-/ebin/
-/.project
+ebin
+.project
+.eunit
