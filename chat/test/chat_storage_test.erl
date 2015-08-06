@@ -33,6 +33,8 @@ store_some_msgs_test() ->
 	?assertEqual([],L -- [a,b]),
 	{ok,H} = chat_storage:get_history(P, a, b),
 	?assertEqual(length(H),4),
+	{ok,Hc} = chat_storage:get_history(P, a, c),
+	?assertEqual(Hc,[]),
 	stop(P).
 
 %%--------------------------------------------------------
