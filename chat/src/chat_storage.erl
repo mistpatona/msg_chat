@@ -9,17 +9,45 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/0]).
+-export([start_link/0,
+		 get_client_list/1,add_message/4,get_history/3,
+		 
+		 add_message_1/4
+	   ]).
 
 start_link() ->
 	gen_server:start_link({local,?MODULE},?MODULE, [], []).
 
+get_client_list(P) ->
+	gen_server:call(P,get_client_list).
 
+get_history(P,Name1,Name2) ->
+	%{Messages,Senders,Receivers} = get_tables(P),
+	gen_server:call(P,{get_history,Name1,Name2}).
+
+add_message(P,From,To,Body) ->
+	gen_server:call(P,{add_message,From,To,Body}).
+add_message_1(P,From,To,Body) ->
+	%should we wrap all in this function into a single transaction ?
+	%unwrapped,it will not interfere with other add's,
+	%but will sometimes make unpleasant influence on reads from our improvized database
+	Mid = get_new_mid(P),
+	{Messages,Senders,Receivers} = get_tables(P),
+	ets:insert(Messages,{Mid,To,From,Body}), % timestamp not needed, messages can be sorted by message id
+	ets:insert(Senders,{From,Mid}),
+	ets:insert(Receivers,{To,Mid}),
+	{ok,Mid}.
+
+%helper functions
+get_new_mid(P) ->
+	gen_server:call(P,get_new_mid).
+get_tables(P)  ->
+	gen_server:call(P,	get_tables).
 
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {}).
+-record(state, {users,messages,sndrs,rcvrs}).
 
 %% init/1
 %% ====================================================================
@@ -34,7 +62,13 @@ start_link() ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
-    {ok, #state{}}.
+	io:format("chat_storage: ~w initing database~n",[self()]),
+	Messages = ets:new(?MODULE,[set]),
+	ets:insert(Messages,{lastMid,0}),
+    {ok, #state{users 		= ets:new(?MODULE,[set]),
+				messages 	= Messages, 
+				sndrs 		= ets:new(?MODULE,[bag]),
+				rcvrs 		= ets:new(?MODULE,[bag])}}.
 
 
 %% handle_call/3
@@ -54,6 +88,46 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
+handle_call(get_client_list,_From,#state{users=U}=State) ->
+	T=ets:tab2list(U),
+	R=[L || {L} <- T],
+	{reply,R,State};
+
+handle_call(get_new_mid,_From,State) ->
+	Mid = case ets:lookup(State#state.messages,lastMid) of
+	[{_,OldMid}] 	-> ets:insert(State#state.messages,{lastMid,OldMid+1}),
+					   OldMid+1;
+	_ 			 	-> {error,"No lastMid record found in messages table"}
+	end,
+	{reply,{ok,Mid},State};
+
+handle_call(get_tables,_From,State) ->
+	{reply,{ok,State#state.messages,State#state.sndrs,State#state.rcvrs},State};
+
+handle_call({add_message,From,To,Body},_From,State) ->
+	Mid = case ets:lookup(State#state.messages,lastMid) of
+	[{_,OldMid}] -> ets:insert(State#state.messages,{lastMid,OldMid+1}), 
+					OldMid+1;
+	_ -> erlang:error("No lastMid record found in messages table")
+	end,
+	% only Mid generation is needed to be synchronous (as it must be a transaction);
+	% the rest of adding to DB must relate on database's own concurrency
+	% ets:insert(State#state.messages,{lastMid,Mid}),
+	ets:insert(State#state.messages,{Mid,To,From,Body}), % timestamp not needed, messages can be sorted by message id
+	ets:insert(State#state.sndrs,{From,Mid}),
+	ets:insert(State#state.rcvrs,{To,Mid}),
+	{reply,{ok,Mid},State};
+
+handle_call({get_history,Login,Friend},_From,State) ->
+	Lout1 = ets:lookup(State#state.sndrs,Login),
+	Lout2 = ets:lookup(State#state.rcvrs,Friend),
+	Lout =    intersect(mapsnd(Lout1), mapsnd(Lout2)),
+	Lin1  = ets:lookup(State#state.sndrs,Friend),
+	Lin2  = ets:lookup(State#state.rcvrs,Login),
+	Lin   = intersect(mapsnd(Lin1), mapsnd(Lin2)),
+	L = lists:sort(Lin ++ Lout),
+	{reply,{ok,L},State};
+
 handle_call(Request, From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -117,5 +191,12 @@ code_change(OldVsn, State, Extra) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+intersect(M,N) ->
+	I=sets:intersection(sets:from_list(M),sets:from_list(N)),
+	sets:to_list(I).
+
+mapsnd(L) -> [X || {_,X} <-L].
+
 
 
