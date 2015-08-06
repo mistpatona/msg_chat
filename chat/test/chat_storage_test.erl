@@ -23,6 +23,17 @@ start_stop_test() ->
 	{ok,P} = start(),
 	stop(P).
 
+store_some_msgs_test() ->
+	{ok,P} = start(),
+	chat_storage:add_message(P, a, b, "a2b"),
+	chat_storage:add_message(P, b, a, "b2a"),
+	chat_storage:add_message(P, a, b, "a2b-2"),
+	chat_storage:add_message(P, b, a, "b2a-2"),
+	L = chat_storage:get_client_list(P),
+	?assertEqual([],L -- [a,b]),
+	{ok,H} = chat_storage:get_history(P, a, b),
+	?assertEqual(length(H),4),
+	stop(P).
 
 %%--------------------------------------------------------
 
