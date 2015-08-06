@@ -11,10 +11,13 @@
 %% ====================================================================
 -export([start_link/1]).
 
+-export([notify/4]).
+
 start_link(Conn) ->
 	gen_server:start_link(?MODULE, [Conn], []).
 
-
+notify(Pid,From, To, Body) ->
+	void.
 
 %% ====================================================================
 %% Behavioural functions
