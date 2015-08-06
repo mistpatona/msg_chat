@@ -10,26 +10,47 @@
 %% API functions
 %% ====================================================================
 -export([login/1,write/3,logout/1,history/2,users/0]).
--export([notify_message/3]).
+-export([notify_message/3,start_link/0]).
+
+start_link() ->
+	gen_server:start_link(?MODULE, [], []).
+
+stop(Pid) ->
+	gen_server:cast(Pid,stop).
 
 notify_message(Conn,From,Body) ->
 	gen_server:cast(Conn,{notify_of_msg,From,Body}).
 
 login(Name) -> %returns PID
-	chat_login:login(self(), Name).
+	{ok,PMy} = ?MODULE:start_link(),
+	{ok,P}=chat_login:login(PMy, Name),
+	set_pid(PMy,P),
+	{ok,PMy}.
 
 logout(Pid) ->
-	chat_cli:logout(Pid).
+	P=get_pid(Pid),
+	chat_cli:logout(P),
+	stop(Pid).
 
 write(Pid,To,Body) -> 
-	chat_cli:send(Pid, To, Body).
+	P=get_pid(Pid),
+	chat_cli:send(P, To, Body).
 
 history(Pid,Friend) ->
-	H=chat_cli:get_history(Pid,Friend),
-	[io_lib:format("~p->~p: ~p",[F,T,B]) || {_Msg,F,T,B} <- H ].
+	P=get_pid(Pid),
+	H=chat_cli:get_history(P,Friend),
+	[lists:flatten(io_lib:format(" ~p->~p: ~p",[F,T,B]))
+		%("m: " ++ F ++ "->" ++ T ++ ": " ++ B)
+		|| {_Msg,F,T,B} <- H ].
 
 users() ->
 	chat_cli:get_users().
+
+get_pid(P) ->
+	gen_server:call(P,get_remote_pid).
+
+set_pid(P,Pid) ->
+	gen_server:cast(P,{set_remote_pid,Pid}).
 
 %% ====================================================================
 %% Behavioural functions
@@ -69,6 +90,10 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
+handle_call( get_remote_pid,_F,State) ->
+	{reply,State,State};
+
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -88,6 +113,12 @@ handle_call(_Request, _From, State) ->
 handle_cast({notify_of_msg,From,Body}, State) ->
 	io:format("~p: ~p~n",[From,Body]),
     {noreply, State};
+
+handle_cast({set_remote_pid,Pid},_State) ->
+	{noreply,Pid};
+
+handle_cast(stop,State) ->
+	{stop,normal,State};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.

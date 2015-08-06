@@ -13,7 +13,7 @@
 
 -export([notify/4,send/3,get_users/0,get_users/1,get_history/2,logout/1]).
 
--export([get_login/1]).
+-export([get_login/1,get_client/1]).
 
 start_link(Conn,Login) ->
 	gen_server:start_link(?MODULE, [Conn,Login], []).
@@ -21,8 +21,10 @@ start_link(Conn,Login) ->
 logout(Pid) ->
 	gen_server:cast(Pid,logout).
 
-notify(Pid,From, _To, Body) ->
+notify(Pid,From,_To, Body) ->
+	%io:format("chat_cli:notify ~p ",[Pid]),
 	Conn = get_client(Pid),
+	%io:format("conn: ~p~n",[Conn]),
 	chat_client:notify_message(Conn,From,Body).
 
 send(Pid,To,Body) ->
@@ -128,6 +130,7 @@ handle_cast(Msg, State) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 handle_info(timeout,#state{reg=no}=State) ->
+	io:format("chat_cli: registering ~p~n",[State#state.login]),
 	chat_online:register(chat_online,self(),State#state.login),
 	{noreply, State#state{reg=yes}};
 
