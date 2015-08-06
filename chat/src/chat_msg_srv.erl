@@ -40,6 +40,8 @@ send(From,To,Body) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
+	% hold links to chat_online and chat_storage,
+	% not to need to register them
     {ok, #state{}}.
 
 
