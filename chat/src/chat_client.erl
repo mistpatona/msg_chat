@@ -1,54 +1,24 @@
 %% @author sergey
-%% @doc @todo Add description to chat_cli.
+%% @doc @todo Add description to chat_client.
 
 
--module(chat_cli).
+-module(chat_client).
 -behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/2]).
+-export([]).
+-export([notify_message/3]).
 
--export([notify/4,send/3,get_users/0,get_users/1,get_history/2]).
-
--export([get_login/1]).
-
-start_link(Conn,Login) ->
-	gen_server:start_link(?MODULE, [Conn,Login], []).
-
-notify(Pid,From, _To, Body) ->
-	Conn = get_client(Pid),
-	chat_client:notify_message(Conn,From,Body).
-
-send(Pid,To,Body) ->
-	Login = get_login(Pid),
-	chat_msg_srv:send(Login,To,Body).
-
-%lists of online and offline usernames ({onl,all})
-get_users() -> 
-	get_users(dummy).
-
-get_users(_Pid) ->
-	Onlines = chat_online:online_users(chat_online),
-	All 	= chat_storage:get_client_list(chat_storage),
-	{Onlines,All}.
-
-get_history(Pid,Friend) ->
-	Login = get_login(Pid),
-	chat_storage:get_history(chat_storage, Login, Friend).
-
-get_login(Pid) ->
-	gen_server:call(Pid,get_login).
-
-get_client(Pid) ->
-	gen_server:call(Pid,get_client).
+notify_message(Conn,From,Body) ->
+	gen_server:cast(Conn,{notify_of_msg,From,Body}).
 
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {client,login}).
+-record(state, {}).
 
 %% init/1
 %% ====================================================================
@@ -62,8 +32,8 @@ get_client(Pid) ->
 	State :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-init([Conn,Login]) ->
-    {ok, #state{client=Conn,login=Login}}.
+init([]) ->
+    {ok, #state{}}.
 
 
 %% handle_call/3
@@ -83,13 +53,7 @@ init([Conn,Login]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call(get_login, _From, State) ->
-	{reply, State#state.login, State};
-
-handle_call(get_client, _From, State) ->
-	{reply, State#state.client, State};
-
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -105,8 +69,11 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
+handle_cast({notify_of_msg,From,Body}, State) ->
+	io:format("~p: ~p~n",[From,Body]),
+    {noreply, State};
 
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 

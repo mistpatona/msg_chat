@@ -11,9 +11,13 @@
 %% ====================================================================
 -export([start_link/0]).
 
+-export([login/2]).
+
 start_link() ->
 	gen_server:start_link({local,?MODULE},?MODULE, [], []).
 
+login(Pid_to_Notify,Login) ->
+	chat_cli_sup:add_client(Pid_to_Notify, Login).
 
 
 %% ====================================================================

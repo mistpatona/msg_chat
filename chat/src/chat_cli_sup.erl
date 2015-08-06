@@ -10,13 +10,13 @@
 %% API functions
 %% ====================================================================
 
--export([start_link/0,add_client/1]).
+-export([start_link/0,add_client/2]).
 
 start_link() ->
 	supervisor:start_link({local,?MODULE},?MODULE, []).
 
-add_client(Conn) ->
-	chat_cli:start_link(Conn).
+add_client(Conn,Login) ->
+	chat_cli:start_link(Conn,Login).
 
 %% ====================================================================
 %% Behavioural functions
