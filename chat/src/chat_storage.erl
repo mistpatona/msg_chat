@@ -21,9 +21,14 @@ start_link() ->
 get_client_list(P) ->
 	gen_server:call(P,get_client_list).
 
-get_history(P,Name1,Name2) ->
+get_history_mids(P,Name1,Name2) ->
 	%{Messages,Senders,Receivers} = get_tables(P),
 	gen_server:call(P,{get_history,Name1,Name2}).
+
+get_history(P,Name1,Name2) ->
+	{ok,L} = get_history_mids(P,Name1,Name2),
+	{ok,{M,_,_}} = get_tables(P),
+	lists:concat([ets:lookup(M,Mid) || Mid <- L ]).
 
 add_message(P,From,To,Body) ->
 	gen_server:call(P,{add_message,From,To,Body}).
@@ -102,7 +107,7 @@ handle_call(get_new_mid,_From,State) ->
 	{reply,{ok,Mid},State};
 
 handle_call(get_tables,_From,State) ->
-	{reply,{ok,State#state.messages,State#state.sndrs,State#state.rcvrs},State};
+	{reply,{ok,{State#state.messages,State#state.sndrs,State#state.rcvrs}},State};
 
 handle_call({add_message,From,To,Body},_From,State) ->
 	Mid = case ets:lookup(State#state.messages,lastMid) of
@@ -116,6 +121,7 @@ handle_call({add_message,From,To,Body},_From,State) ->
 	ets:insert(State#state.messages,{Mid,To,From,Body}), % timestamp not needed, messages can be sorted by message id
 	ets:insert(State#state.sndrs,{From,Mid}),
 	ets:insert(State#state.rcvrs,{To,Mid}),
+	ets:insert(State#state.users,{From}),
 	{reply,{ok,Mid},State};
 
 handle_call({get_history,Login,Friend},_From,State) ->

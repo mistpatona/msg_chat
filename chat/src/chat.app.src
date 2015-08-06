@@ -8,5 +8,6 @@
                   stdlib
                  ]},
   {mod, { chat_app, []}},
-  {env, []}
+  {env, []},
+  {modules,[chat_client]}
  ]}.

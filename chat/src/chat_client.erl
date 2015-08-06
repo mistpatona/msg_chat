@@ -9,11 +9,20 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([]).
+-export([login/1,write/3,logout/1]).
 -export([notify_message/3]).
 
 notify_message(Conn,From,Body) ->
 	gen_server:cast(Conn,{notify_of_msg,From,Body}).
+
+login(Name) -> %returns PID
+	chat_login:login(self(), Name).
+
+logout(Pid) ->
+	chat_cli:logout(Pid).
+
+write(Pid,To,Body) -> 
+	chat_cli:send(Pid, To, Body).
 
 %% ====================================================================
 %% Behavioural functions
@@ -88,7 +97,7 @@ handle_cast(_Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(Info, State) ->
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -101,7 +110,7 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
@@ -113,7 +122,7 @@ terminate(Reason, State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 

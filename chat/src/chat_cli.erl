@@ -11,12 +11,15 @@
 %% ====================================================================
 -export([start_link/2]).
 
--export([notify/4,send/3,get_users/0,get_users/1,get_history/2]).
+-export([notify/4,send/3,get_users/0,get_users/1,get_history/2,logout/1]).
 
 -export([get_login/1]).
 
 start_link(Conn,Login) ->
 	gen_server:start_link(?MODULE, [Conn,Login], []).
+
+logout(Pid) ->
+	gen_server:cast(Pid,logout).
 
 notify(Pid,From, _To, Body) ->
 	Conn = get_client(Pid),
@@ -48,7 +51,7 @@ get_client(Pid) ->
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {client,login}).
+-record(state, {client,login,reg}).
 
 %% init/1
 %% ====================================================================
@@ -63,7 +66,7 @@ get_client(Pid) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([Conn,Login]) ->
-    {ok, #state{client=Conn,login=Login}}.
+    {ok, #state{client=Conn,login=Login,reg=no},0}.
 
 
 %% handle_call/3
@@ -105,6 +108,9 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
+handle_cast(logout,State) ->
+	{stop,normal,State};
+
 
 handle_cast(Msg, State) ->
     {noreply, State}.
@@ -121,7 +127,11 @@ handle_cast(Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(Info, State) ->
+handle_info(timeout,#state{reg=no}=State) ->
+	chat_online:register(chat_online,self(),State#state.login),
+	{noreply, State#state{reg=yes}};
+
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -134,7 +144,8 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
+	chat_online:unregister(chat_online,self()),
     ok.
 
 
