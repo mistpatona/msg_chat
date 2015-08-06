@@ -11,15 +11,35 @@
 %% ====================================================================
 -export([start_link/0]).
 
+-export([register/3,unregister/2,online_users/1,get_pids_by_name/2]).
+
+-export([get_list/1]). % need to be exported for debug / test only
+
 start_link() ->
 	gen_server:start_link({local,?MODULE},?MODULE, [], []).
 
+register(P,Pid,Login) ->
+	gen_server:cast(P,{register,Pid,Login}).
 
+unregister(P,Pid) ->
+	gen_server:cast(P,{unregister,Pid}).
+
+online_users(P) ->
+	L = get_list(P),
+	lists:usort([U || {_Pid,U} <- L]).
+
+get_pids_by_name(P,Login) ->
+	L = get_list(P),
+	[Pid || {Pid,User} <- L , User =:= Login].
+
+%get the whole server state
+get_list(P) ->
+	gen_server:call(P,get_list).
 
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {}).
+%-record(state, {}).
 
 %% init/1
 %% ====================================================================
@@ -34,7 +54,7 @@ start_link() ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
-    {ok, #state{}}.
+    {ok, []}.  %state is just s list: [{Pid,Login}]
 
 
 %% handle_call/3
@@ -54,7 +74,11 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call(Request, From, State) ->
+handle_call(get_list, _From, L) ->
+    Reply = L,
+    {reply, Reply, L};
+
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -70,7 +94,14 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast(Msg, State) ->
+
+handle_cast({register,Pid,Login},L) ->
+	{noreply,[{Pid,Login}|L]};
+
+handle_cast({unregister,Pid},L) ->
+	{noreply,lists:filter(fun({X,_})-> X=/=Pid end,L)};
+
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 
