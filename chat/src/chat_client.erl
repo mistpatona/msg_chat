@@ -9,7 +9,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([login/1,write/3,logout/1]).
+-export([login/1,write/3,logout/1,history/2,users/0]).
 -export([notify_message/3]).
 
 notify_message(Conn,From,Body) ->
@@ -23,6 +23,13 @@ logout(Pid) ->
 
 write(Pid,To,Body) -> 
 	chat_cli:send(Pid, To, Body).
+
+history(Pid,Friend) ->
+	H=chat_cli:get_history(Pid,Friend),
+	[io_lib:format("~p->~p: ~p",[F,T,B]) || {_Msg,F,T,B} <- H ].
+
+users() ->
+	chat_cli:get_users().
 
 %% ====================================================================
 %% Behavioural functions

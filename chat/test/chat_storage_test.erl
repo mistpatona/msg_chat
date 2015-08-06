@@ -31,9 +31,9 @@ store_some_msgs_test() ->
 	chat_storage:add_message(P, b, a, "b2a-2"),
 	L = chat_storage:get_client_list(P),
 	?assertEqual([],L -- [a,b]),
-	{ok,H} = chat_storage:get_history(P, a, b),
+	H = chat_storage:get_history(P, a, b),
 	?assertEqual(length(H),4),
-	{ok,Hc} = chat_storage:get_history(P, a, c),
+	Hc = chat_storage:get_history(P, a, c),
 	?assertEqual(Hc,[]),
 	stop(P).
 
