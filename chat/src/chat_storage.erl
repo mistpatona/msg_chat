@@ -38,7 +38,7 @@ add_message_1(P,From,To,Body) ->
 	%but will sometimes make unpleasant influence on reads from our improvized database
 	Mid = get_new_mid(P),
 	{Messages,Senders,Receivers} = get_tables(P),
-	ets:insert(Messages,{Mid,To,From,Body}), % timestamp not needed, messages can be sorted by message id
+	ets:insert(Messages,{Mid,From,To,Body}), % timestamp not needed, messages can be sorted by message id
 	ets:insert(Senders,{From,Mid}),
 	ets:insert(Receivers,{To,Mid}),
 	{ok,Mid}.
@@ -118,7 +118,7 @@ handle_call({add_message,From,To,Body},_From,State) ->
 	% only Mid generation is needed to be synchronous (as it must be a transaction);
 	% the rest of adding to DB must relate on database's own concurrency
 	% ets:insert(State#state.messages,{lastMid,Mid}),
-	ets:insert(State#state.messages,{Mid,To,From,Body}), % timestamp not needed, messages can be sorted by message id
+	ets:insert(State#state.messages,{Mid,From,To,Body}), % timestamp not needed, messages can be sorted by message id
 	ets:insert(State#state.sndrs,{From,Mid}),
 	ets:insert(State#state.rcvrs,{To,Mid}),
 	ets:insert(State#state.users,{From}),

@@ -44,6 +44,7 @@ get_users(_Pid) ->
 
 get_history(Pid,Friend) ->
 	Login = get_login(Pid),
+	%io:format("chat_cli: login for history: ~p~n",[Login]),
 	chat_storage:get_history(chat_storage, Login, Friend).
 
 get_login(Pid) ->
