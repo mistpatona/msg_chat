@@ -25,10 +25,10 @@ reg_unreg_test() ->
 	chat_online:unregister(P, ccc), % nonexisting
 	chat_online:unregister(P, aaa),
 	
-	U = chat_online:online_users(P),
+	{U,_} = chat_online:get_user_list(P),
 	?assertEqual(U,[a,b]), % usernames are uniq'ed and sorted
 	chat_online:unregister(P, aa),
-	Ub = chat_online:online_users(P),
+	{Ub,_} = chat_online:get_user_list(P),
 	?assertEqual(Ub,[b]),
 	P_no_a = chat_online:get_pids_by_name(P,a),
 	?assertEqual(P_no_a,[]),

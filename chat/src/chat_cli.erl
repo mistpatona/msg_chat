@@ -36,9 +36,11 @@ get_users() ->
 	get_users(dummy).
 
 get_users(_Pid) ->
-	Onlines = chat_online:online_users(chat_online),
-	All 	= chat_storage:get_client_list(chat_storage),
-	{Onlines,All}.
+	chat_online:get_user_list(chat_online).
+
+%% 	Onlines = chat_online:online_users(chat_online),
+%% 	All 	= chat_online:offline_users(chat_online),
+%% 	{Onlines,All}.
 
 get_history(Pid,Friend) ->
 	Login = get_login(Pid),
