@@ -11,7 +11,7 @@
 %% ====================================================================
 -export([start_link/2]).
 
--export([notify/4,send/3,get_users/0,get_users/1,get_history/2,logout/1]).
+-export([notify/4,send/3,get_users/1,get_history/2,logout/1]).
 
 -export([get_login/1,get_client/1]).
 
@@ -28,24 +28,20 @@ notify(Pid,From,_To, Body) ->
 	chat_client:notify_message(Conn,From,Body).
 
 send(Pid,To,Body) ->
-	Login = get_login(Pid),
-	chat_msg_srv:send(Login,To,Body).
+	gen_server:cast(Pid,{send,To,Body}).
 
-%lists of online and offline usernames ({onl,all})
-get_users() -> 
-	get_users(dummy).
+%lists of online and offline usernames ({online,all})
 
-get_users(_Pid) ->
-	chat_online:get_user_list(chat_online).
+get_users(Pid) ->
+	gen_server:call(Pid,get_users).
+	%chat_online:get_user_list(chat_online).
 
 %% 	Onlines = chat_online:online_users(chat_online),
 %% 	All 	= chat_online:offline_users(chat_online),
 %% 	{Onlines,All}.
 
 get_history(Pid,Friend) ->
-	Login = get_login(Pid),
-	%io:format("chat_cli: login for history: ~p~n",[Login]),
-	chat_storage:get_history(chat_storage, Login, Friend).
+	gen_server:call(Pid,{get_history,Friend}).
 
 get_login(Pid) ->
 	gen_server:call(Pid,get_login).
@@ -97,6 +93,16 @@ handle_call(get_login, _From, State) ->
 handle_call(get_client, _From, State) ->
 	{reply, State#state.client, State};
 
+handle_call(get_users, _From, State) ->
+	R = chat_online:get_user_list(chat_online),
+	{reply, R, State};
+
+handle_call({get_history,Friend}, _From, State) ->
+	Login = State#state.login, %get_login(Pid),
+	%io:format("chat_cli: login for history: ~p~n",[Login]),
+	R=chat_storage:get_history(chat_storage, Login, Friend),
+	{reply, R, State};
+
 handle_call(Request, From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -114,8 +120,13 @@ handle_call(Request, From, State) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 handle_cast(logout,State) ->
+	chat_online:unregister(chat_online, self()),
 	{stop,normal,State};
 
+handle_cast({send,To,Body},State) ->
+ 	Login = State#state.login,
+ 	chat_msg_srv:send(Login,To,Body),
+	{noreply, State};
 
 handle_cast(Msg, State) ->
     {noreply, State}.

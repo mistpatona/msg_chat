@@ -14,10 +14,11 @@
 -export([login/2]).
 
 start_link() ->
-	gen_server:start_link({local,?MODULE},?MODULE, [], []).
+	gen_server:start_link({global,?MODULE},?MODULE, [], []).
 
 login(Pid_to_Notify,Login) ->
-	chat_cli_sup:add_client(Pid_to_Notify, Login).
+	gen_server:call({global,?MODULE},{login,Pid_to_Notify, Login}).
+	%chat_cli_sup:add_client(Pid_to_Notify, Login).
 
 
 %% ====================================================================
@@ -58,6 +59,11 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
+
+handle_call({login,Pid_to_Notify, Login}, _From, State) ->
+	Reply = chat_cli_sup:add_client(Pid_to_Notify, Login),
+	{reply, Reply, State};
+
 handle_call(Request, From, State) ->
     Reply = ok,
     {reply, Reply, State}.

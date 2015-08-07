@@ -9,8 +9,10 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([login/1,write/3,logout/1,history/2,users/0]).
+-export([login/1,write/3,logout/1,history/2,users/1]).
 -export([notify_message/3,start_link/0]).
+
+-export([get_pid/1]).
 
 start_link() ->
 	gen_server:start_link(?MODULE, [], []).
@@ -21,7 +23,7 @@ stop(Pid) ->
 notify_message(Conn,From,Body) ->
 	gen_server:cast(Conn,{notify_of_msg,From,Body}).
 
-login(Name) -> %returns PID
+login(Name) -> 
 	{ok,PMy} = ?MODULE:start_link(),
 	{ok,P}=chat_login:login(PMy, Name),
 	set_pid(PMy,P),
@@ -43,8 +45,9 @@ history(Pid,Friend) ->
 		%("m: " ++ F ++ "->" ++ T ++ ": " ++ B)
 		|| {_Msg,F,T,B} <- H ].
 
-users() ->
-	chat_cli:get_users().
+users(Pid) ->
+	P=get_pid(Pid),
+	chat_cli:get_users(P).
 
 get_pid(P) ->
 	gen_server:call(P,get_remote_pid).
