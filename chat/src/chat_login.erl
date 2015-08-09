@@ -64,7 +64,7 @@ handle_call({login,Pid_to_Notify, Login}, _From, State) ->
 	Reply = chat_cli_sup:add_client(Pid_to_Notify, Login),
 	{reply, Reply, State};
 
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -80,7 +80,7 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 
@@ -95,7 +95,7 @@ handle_cast(Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(Info, State) ->
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -108,7 +108,7 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
@@ -120,7 +120,7 @@ terminate(Reason, State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 

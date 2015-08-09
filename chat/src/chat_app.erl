@@ -2,7 +2,7 @@
 %% @doc @todo Add description to chat_sup.
 
 
--module(chat_app). %also serves as chat_sup
+-module(chat_app). %also serves as chat_sup -- main supervisor
 -behaviour(supervisor).  
 -behaviour(application).
 -export([init/1]).
@@ -47,7 +47,7 @@ start_link() ->
 %% ====================================================================
 init([]) ->
     Sup_flags  = #{strategy => rest_for_one},
-	Stub_sup   = #{id => stub_sup,
+	Stub_sup   = #{id => stub_sup, % runs chat_storage and chat_online
 				   start => {chat_stub_sup,start_link,[]},
 				   type  => supervisor
 				  },

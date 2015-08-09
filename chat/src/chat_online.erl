@@ -12,7 +12,6 @@
 -export([start_link/0]).
 
 -export([register/3,unregister/2,
-		 %online_users/1,offline_users/1,
 		 get_user_list/1,
 		 get_pids_by_name/2]).
 
@@ -26,13 +25,6 @@ register(P,Pid,Login) ->
 unregister(P,Pid) ->
 	gen_server:cast(P,{unregister,Pid}).
 
-online_users(P) ->
-	L = get_online_list(P),
-	lists:usort([U || {_Pid,U} <- L]).
-
-offline_users(P) ->
-	get_offline_list(P).
-
 get_pids_by_name(P,Login) ->
 	L = get_online_list(P),
 	[Pid || {Pid,User} <- L , User =:= Login].
@@ -40,8 +32,6 @@ get_pids_by_name(P,Login) ->
 get_online_list(P) ->
 	gen_server:call(P,get_online_list).
 
-get_offline_list(P) ->
-	gen_server:call(P,get_offline_list).
 
 get_user_list(P) ->
 	gen_server:call(P,get_user_list).
@@ -49,7 +39,7 @@ get_user_list(P) ->
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {online,offline}).
+-record(state, {online,all}).
 
 %% init/1
 %% ====================================================================
@@ -64,8 +54,8 @@ get_user_list(P) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
-    {ok, #state{online=[],offline=sets:new()}}. 
-	% online is a list [{Pid,Login}], offline is a set of logins
+    {ok, #state{online=[],all=sets:new()}}. 
+	% "online" is a list [{Pid,Login}], "all" is a set of logins
 
 %% handle_call/3
 %% ====================================================================
@@ -87,11 +77,11 @@ init([]) ->
 handle_call(get_online_list, _From, #state{online=L}=State) ->
 	{reply, L, State};
 
-handle_call(get_offline_list, _From, #state{offline=L}=State) ->
+handle_call(get_offline_list, _From, #state{all=L}=State) ->
 	{reply, L, State};
 
-handle_call(get_user_list, _From, #state{online=On,offline=All}=State) ->
-	{reply, {lists:usort([L||{_Pid,L}<-On]),sets:to_list(All)}, State};
+handle_call(get_user_list, _From, #state{online=On,all=All}=State) ->
+	{reply, {lists:usort([L||{_Pid,L}<-On]),lists:sort(sets:to_list(All))}, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -110,12 +100,13 @@ handle_call(_Request, _From, State) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 
-handle_cast({register,Pid,Login},#state{online=Lonline,offline=Soffline}=State) ->
-	{noreply,State#state{	online=[{Pid,Login}|Lonline],
-							offline= sets:add_element(Login,Soffline) 
+handle_cast({register,Pid,Login},#state{online=Lonline,all=Sall}=State) ->
+	{noreply,State#state{	online= [{Pid,Login}|Lonline],
+							all   = sets:add_element(Login,Sall) 
 				   		}};
 
 handle_cast({unregister,Pid},#state{online=L}=State) ->
+	io:format("chat_online: unregistering ~p~n",[Pid]),
 	{noreply,State#state{online=
 							 lists:filter(fun({X,_})-> X=/=Pid end,L)
 						}};
@@ -135,7 +126,7 @@ handle_cast(_Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(Info, State) ->
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -148,7 +139,7 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
@@ -160,7 +151,7 @@ terminate(Reason, State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 

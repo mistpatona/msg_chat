@@ -22,23 +22,16 @@ logout(Pid) ->
 	gen_server:cast(Pid,logout).
 
 notify(Pid,From,_To, Body) ->
-	%io:format("chat_cli:notify ~p ",[Pid]),
 	Conn = get_client(Pid),
-	%io:format("conn: ~p~n",[Conn]),
 	chat_client:notify_message(Conn,From,Body).
 
 send(Pid,To,Body) ->
 	gen_server:cast(Pid,{send,To,Body}).
 
-%lists of online and offline usernames ({online,all})
+%lists of usernames ({online,all})
 
 get_users(Pid) ->
 	gen_server:call(Pid,get_users).
-	%chat_online:get_user_list(chat_online).
-
-%% 	Onlines = chat_online:online_users(chat_online),
-%% 	All 	= chat_online:offline_users(chat_online),
-%% 	{Onlines,All}.
 
 get_history(Pid,Friend) ->
 	gen_server:call(Pid,{get_history,Friend}).
@@ -98,12 +91,11 @@ handle_call(get_users, _From, State) ->
 	{reply, R, State};
 
 handle_call({get_history,Friend}, _From, State) ->
-	Login = State#state.login, %get_login(Pid),
-	%io:format("chat_cli: login for history: ~p~n",[Login]),
+	Login = State#state.login, 
 	R=chat_storage:get_history(chat_storage, Login, Friend),
 	{reply, R, State};
 
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -120,6 +112,7 @@ handle_call(Request, From, State) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 handle_cast(logout,State) ->
+	io:format("chat_cli: logout ~p~n",[State#state.login]),
 	chat_online:unregister(chat_online, self()),
 	{stop,normal,State};
 
@@ -128,7 +121,7 @@ handle_cast({send,To,Body},State) ->
  	chat_msg_srv:send(Login,To,Body),
 	{noreply, State};
 
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 
@@ -145,8 +138,15 @@ handle_cast(Msg, State) ->
 %% ====================================================================
 handle_info(timeout,#state{reg=no}=State) ->
 	io:format("chat_cli: registering ~p~n",[State#state.login]),
+	process_flag(trap_exit, true),
+	link(State#state.client),
 	chat_online:register(chat_online,self(),State#state.login),
 	{noreply, State#state{reg=yes}};
+
+handle_info({'EXIT',FromPid,Reason},State) ->
+	io:format("chat_cli: client process ~p exited: ~p, unregistering ~p~n",[FromPid,Reason,State#state.login]),
+	chat_online:unregister(chat_online, self()),
+	{stop,normal,State};
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -162,8 +162,8 @@ handle_info(_Info, State) ->
 			| term().
 %% ====================================================================
 terminate(_Reason, _State) ->
-	chat_online:unregister(chat_online,self()),
-    ok.
+	%chat_online:unregister(chat_online,self()),
+	ok.
 
 
 %% code_change/3
@@ -174,7 +174,7 @@ terminate(_Reason, _State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 

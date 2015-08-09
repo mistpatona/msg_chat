@@ -31,8 +31,10 @@ login(Name) ->
 
 logout(Pid) ->
 	P=get_pid(Pid),
-	chat_cli:logout(P),
-	stop(Pid).
+	io:format("client logout: local:~p, remote:~p~n",[Pid,P]),
+	Result=chat_cli:logout(P),
+	stop(Pid),
+	Result.
 
 write(Pid,To,Body) -> 
 	P=get_pid(Pid),
@@ -47,7 +49,15 @@ history(Pid,Friend) ->
 
 users(Pid) ->
 	P=get_pid(Pid),
-	chat_cli:get_users(P).
+	{Onl,All}=chat_cli:get_users(P),
+	%Ofl = All -- Onl
+	Pretty=[
+	 case lists:member(X0, Onl) of
+	 	true -> "*" ++ pretty_string(X0);
+		_    -> pretty_string(X0)
+	 end
+	||  X0 <-All],
+	{{Onl,All},Pretty}.
 
 get_pid(P) ->
 	gen_server:call(P,get_remote_pid).
@@ -171,4 +181,5 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %% ====================================================================
 
-
+pretty_string(X) -> 
+	lists:flatten (io_lib:format("~s",[X])).
